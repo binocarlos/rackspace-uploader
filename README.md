@@ -3,39 +3,65 @@ rackspace-uploader
 
 bash script that uploads a local folder to rackspace files using curl
 
-## environment variables
-
- * RACKSPACE_USERNAME - your rackspace username
- * RACKSPACE_APIKEY - your rackspace apikey
- * RACKSPACE_CONTAINER - the name of the container to upload into
-
-## options
-
-You can specify the 3 values above as options to the script:
+## variables
 
 ```
-$ rackspace-uploader <username> <apikey> <container> <folder>
+Usage: rackspace-uploader [options]
+
+-h|--help             show this help text
+                     
+-f|--folder           path to a local folder to upload
+-u|--username         the rackspace username
+-a|--apikey           the rackspace apikey
+-c|--container        the rackspace container
+
+Environment Variables:
+
+RACKSPACE_FOLDER -> --folder
+RACKSPACE_USERNAME -> --user
+RACKSPACE_APIKEY -> --apikey
+RACKSPACE_CONTAINER -> --container
 ```
 
-The folder to be uploaded is mounted as a volume as '/uploadfiles'
+## example
 
-Running the script by passing the options as envrionment variables:
+Upload a folder using environment variables:
 
+```bash
+$ RACKSPACE_FOLDER=[folder] \
+  RACKSPACE_USERNAME=[username] \
+  RACKSPACE_APIKEY=[apikey] \
+  RACKSPACE_CONTAINER=[containername] \
+  rackspace-uploader
 ```
+
+Upload a folder using command line options:
+
+```bash
+$ rackspace-uploader \
+  --folder=[folder] \
+  --username=[username] \
+  --apikey=[apikey] \
+  --container=[container]
+```
+
+You could also use a combination of the two.
+
+## docker
+The Dockerfile in the repository will build a container ready to run the uploader.
+
+Also - quarry/rackspace-uploader is a trusted build from this repo.
+
+To use the docker container you need to mount the folder you want to upload:
+
+```bash
 $ docker run -i -t \
  -v /my/folder/to/upload:/uploadfiles \
- -e RACKSPACE_USERNAME=<username> \
- -e RACKSPACE_APIKEY=<apikey> \
- -e RACKSPACE_CONTAINER=<containername> \
- quarry/rackspace-uploader
-```
-
-Also - the environment variables can be passed as options to the script.
-
-```
-$ docker run -i -t \
- -v /my/folder/to/upload:/uploadfiles \
- quarry/rackspace-uploader <username> <apikey> <containername>
+ quarry/rackspace-uploader \
+ --folder=/uploadfiles
+ --username=[username]
+ --apikey=[apikey] \
+ --container=[container]
 ```
 
 

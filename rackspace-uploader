@@ -1,59 +1,9 @@
 #!/usr/bin/env bash
-currentdir=${PWD##*/}
+currentdir=$(pwd)
 export RACKSPACE_FOLDER=${RACKSPACE_FOLDER:=$currentdir}
 export RACKSPACE_USERNAME=${RACKSPACE_USERNAME:=""}
 export RACKSPACE_APIKEY=${RACKSPACE_APIKEY:=""}
 export RACKSPACE_CONTAINER=${RACKSPACE_CONTAINER:=""}
-
-
-for i in "$@"
-do
-case $i in
-		-f=*|--folder=*)
-    RACKSPACE_FOLDER="${i#*=}"
-    ;;
-    -u=*|--username=*)
-    RACKSPACE_USERNAME="${i#*=}"
-    ;;
-    -a=*|--apikey=*)
-    RACKSPACE_APIKEY="${i#*=}"
-    ;;
-    -c=*|--container=*)
-    RACKSPACE_CONTAINER="${i#*=}"
-    ;;
-    --default)
-    DEFAULT=YES
-    ;;
-    *)
-            # unknown option
-    ;;
-esac
-done
-
-if [[ ! -d $RACKSPACE_FOLDER ]]; then
-	echo "$RACKSPACE_FOLDER does not exist"
-	exit 1
-fi
-
-if [[ -z $RACKSPACE_USERNAME ]]; then
-	echo "RACKSPACE_USERNAME needed"
-	exit 1
-fi
-
-if [[ -z $RACKSPACE_APIKEY ]]; then
-	echo "RACKSPACE_APIKEY needed"
-	exit 1
-fi
-
-if [[ -z $RACKSPACE_CONTAINER ]]; then
-	echo "RACKSPACE_CONTAINER needed"
-	exit 1
-fi
-
-echo "FOLDER: $RACKSPACE_FOLDER"
-echo "USER: $RACKSPACE_USERNAME"
-echo "KEY: $RACKSPACE_APIKEY"
-echo "CONTAINER: $RACKSPACE_CONTAINER"
 
 
 function auth() {
@@ -86,3 +36,82 @@ function upload_folder() {
 	done
 
 }
+
+function show_help() {
+	cat <<EOF
+Usage: $0 [options]
+
+-h|--help             show this help text
+                     
+-f|--folder           path to a local folder to upload
+-u|--username         the rackspace username
+-a|--apikey           the rackspace apikey
+-c|--container        the rackspace container
+
+Environment Variables:
+
+RACKSPACE_FOLDER -> --folder
+RACKSPACE_USERNAME -> --user
+RACKSPACE_APIKEY -> --apikey
+RACKSPACE_CONTAINER -> --container
+EOF
+}
+
+for i in "$@"
+do
+case $i in
+		-f=*|--folder=*)
+    RACKSPACE_FOLDER="${i#*=}"
+    ;;
+    -u=*|--username=*)
+    RACKSPACE_USERNAME="${i#*=}"
+    ;;
+    -a=*|--apikey=*)
+    RACKSPACE_APIKEY="${i#*=}"
+    ;;
+    -c=*|--container=*)
+    RACKSPACE_CONTAINER="${i#*=}"
+    ;;
+    -h|--help)
+    show_help
+    exit
+    ;;
+    #--default)
+    #DEFAULT=YES
+    #;;
+    *)
+            # unknown option
+    ;;
+esac
+done
+
+if [[ -z $RACKSPACE_FOLDER ]]; then
+	echo "RACKSPACE_FOLDER | -f | --folder needed"
+	exit 1
+fi
+
+if [[ -z $RACKSPACE_USERNAME ]]; then
+	echo "RACKSPACE_USERNAME | -u | --username needed"
+	exit 1
+fi
+
+if [[ -z $RACKSPACE_APIKEY ]]; then
+	echo "RACKSPACE_APIKEY | -a | --apikey needed"
+	exit 1
+fi
+
+if [[ -z $RACKSPACE_CONTAINER ]]; then
+	echo "RACKSPACE_CONTAINER | -c | --container needed"
+	exit 1
+fi
+
+if [[ ! -d $RACKSPACE_FOLDER ]]; then
+	echo "the folder: $RACKSPACE_FOLDER does not exist"
+	exit 1
+fi
+
+echo "FOLDER: $RACKSPACE_FOLDER"
+echo "USER: $RACKSPACE_USERNAME"
+echo "KEY: $RACKSPACE_APIKEY"
+echo "CONTAINER: $RACKSPACE_CONTAINER"
+
