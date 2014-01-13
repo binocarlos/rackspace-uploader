@@ -4,10 +4,6 @@ FROM ubuntu:12.04
 RUN echo "deb http://archive.ubuntu.com/ubuntu precise main universe multiverse" > /etc/apt/sources.list
 RUN apt-get update
 RUN apt-get upgrade -y
-RUN apt-get install -y curl
-
-RUN wget -qO /usr/local/bin/JSON.sh https://raw.github.com/dominictarr/JSON.sh/master/JSON.sh
-RUN chmod a+x /usr/local/bin/JSON.sh
-ADD ./rackspace-uploader /usr/local/bin/rackspace-uploader
-RUN chmod a+x /usr/local/bin/rackspace-uploader
+RUN apt-get install -y curl wget
+RUN wget -qO- https://raw.github.com/binocarlos/rackspace-uploader/master/bootstrap.sh | bash
 ENTRYPOINT ["/usr/local/bin/rackspace-uploader"]

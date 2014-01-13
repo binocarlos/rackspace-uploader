@@ -3,24 +3,27 @@ rackspace-uploader
 
 bash script that uploads a local folder to rackspace files using curl
 
-## variables
+## installation
+
+If you have docker as part of your system then you can run the quarry/rackspace-uploader image and skip the installation.
+
+For standard bash mode:
 
 ```
-Usage: rackspace-uploader [options]
+$ wget -qO- https://raw.github.com/binocarlos/rackspace-uploader/master/bootstrap.sh | sudo bash
+```
 
--h|--help             show this help text
-                     
--f|--folder           path to a local folder to upload
--u|--username         the rackspace username
--a|--apikey           the rackspace apikey
--c|--container        the rackspace container
+## usage
 
-Environment Variables:
+```
+Usage: /usr/local/bin/rackspace-uploader [options]
 
-RACKSPACE_FOLDER -> --folder
-RACKSPACE_USERNAME -> --user
-RACKSPACE_APIKEY -> --apikey
-RACKSPACE_CONTAINER -> --container
+-h | --help                             show this help text
+
+-f | --folder    | RACKSPACE_FOLDER     path to a local folder to upload
+-u | --username  | RACKSPACE_USERNAME   the rackspace username
+-a | --apikey    | RACKSPACE_APIKEY     the rackspace apikey
+-c | --container | RACKSPACE_CONTAINER  the rackspace container
 ```
 
 ## example
@@ -64,5 +67,7 @@ $ docker run -i -t \
  --container=[container]
 ```
 
+## License
 
+MIT
 
