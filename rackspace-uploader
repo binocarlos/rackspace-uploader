@@ -5,20 +5,38 @@ export RACKSPACE_USERNAME=${RACKSPACE_USERNAME:=""}
 export RACKSPACE_APIKEY=${RACKSPACE_APIKEY:=""}
 export RACKSPACE_CONTAINER=${RACKSPACE_CONTAINER:=""}
 
+export RACKSPACE_URL=""
+export RACKSPACE_TOKEN=""
 
-function auth() {
+function get_auth_packet() {
 	curl -s -d \
 	'{
 	    "auth":
 	    {
 	       "RAX-KSKEY:apiKeyCredentials":
 	       {  
-	          "username": "diggerhq",  
-	          "apiKey": "a39bd9bf7884cec67477b2893732cd38"}
+	          "username": "'$RACKSPACE_USERNAME'",  
+	          "apiKey": "'$RACKSPACE_APIKEY'"}
 	    }  
 	}' \
 	-H 'Content-Type: application/json' \
-	'https://identity.api.rackspacecloud.com/v2.0/tokens' | python -m json.tool
+	'https://identity.api.rackspacecloud.com/v2.0/tokens' | JSON.sh
+}
+
+function get_access_token() {
+	get_auth_packet | egrep '\["access","token","id"*\]' | awk '{print $2}' | sed 's/"//g'
+}
+
+function get_files_endpoint() {
+	get_auth_packet | egrep '\["access","serviceCatalog",1,"endpoints",0,"publicURL"*\]' | awk '{print $2}' | sed 's/\\\//\//g' | sed 's/"//g'
+}
+
+function login() {
+	echo "fetching login details from rackspace:"
+	access_token=$(get_access_token)
+	files_endpoint=$(get_files_endpoint)
+	echo $access_token
+	echo $files_endpoint
 }
 
 function upload_file() {
@@ -61,16 +79,16 @@ for i in "$@"
 do
 case $i in
 		-f=*|--folder=*)
-    RACKSPACE_FOLDER="${i#*=}"
+    export RACKSPACE_FOLDER="${i#*=}"
     ;;
     -u=*|--username=*)
-    RACKSPACE_USERNAME="${i#*=}"
+    export RACKSPACE_USERNAME="${i#*=}"
     ;;
     -a=*|--apikey=*)
-    RACKSPACE_APIKEY="${i#*=}"
+    export RACKSPACE_APIKEY="${i#*=}"
     ;;
     -c=*|--container=*)
-    RACKSPACE_CONTAINER="${i#*=}"
+    export RACKSPACE_CONTAINER="${i#*=}"
     ;;
     -h|--help)
     show_help
@@ -110,8 +128,4 @@ if [[ ! -d $RACKSPACE_FOLDER ]]; then
 	exit 1
 fi
 
-echo "FOLDER: $RACKSPACE_FOLDER"
-echo "USER: $RACKSPACE_USERNAME"
-echo "KEY: $RACKSPACE_APIKEY"
-echo "CONTAINER: $RACKSPACE_CONTAINER"
-
+login
