@@ -5,9 +5,18 @@ export RACKSPACE_USERNAME=${RACKSPACE_USERNAME:=""}
 export RACKSPACE_APIKEY=${RACKSPACE_APIKEY:=""}
 export RACKSPACE_CONTAINER=${RACKSPACE_CONTAINER:=""}
 
-export RACKSPACE_URL=""
 export RACKSPACE_TOKEN=""
+export RACKSPACE_URL=""
 
+#
+#
+# AUTH SECTION
+#
+#
+
+# hit rackspace with our username and apikey
+# it will return the auth packet with token and endpoints
+# we use JSON.sh to parse the return data
 function get_auth_packet() {
 	curl -s -d \
 	'{
@@ -20,58 +29,109 @@ function get_auth_packet() {
 	    }  
 	}' \
 	-H 'Content-Type: application/json' \
-	'https://identity.api.rackspacecloud.com/v2.0/tokens' | JSON.sh
+	'https://identity.api.rackspacecloud.com/v2.0/tokens'
 }
 
+# extract the token from the auth data
 function get_access_token() {
-	get_auth_packet | egrep '\["access","token","id"*\]' | awk '{print $2}' | sed 's/"//g'
+	cat | JSON.sh | egrep '\["access","token","id"*\]' | awk '{print $2}' | sed 's/"//g'
 }
 
+# extract the files endpoint from the auth data
 function get_files_endpoint() {
-	get_auth_packet | egrep '\["access","serviceCatalog",1,"endpoints",0,"publicURL"*\]' | awk '{print $2}' | sed 's/\\\//\//g' | sed 's/"//g'
+	cat | JSON.sh | egrep '\["access","serviceCatalog",1,"endpoints",0,"publicURL"*\]' | awk '{print $2}' | sed 's/\\\//\//g' | sed 's/"//g'
 }
 
-function login() {
-	echo "fetching login details from rackspace:"
-	access_token=$(get_access_token)
-	files_endpoint=$(get_files_endpoint)
-	echo $access_token
-	echo $files_endpoint
+#
+#
+# UPLOAD SECTION
+#
+#
+
+#Downloads a file from a container
+function f_get () {
+    CURL_TEST="curl -s -I -H"
+    CURL_GET="curl --progress-bar -O -H"
+      RESPONSE=$(${CURL_TEST} "X-Auth-Token: ${STORAGETOKEN}" $STORAGEURL/${OBJECT}/${FILE})| head -1 |awk '{print $2}'
+      if `echo ${RESPONSE} |grep -q 404`; then
+        echo "${FILE} was not found in ${OBJECT} container."
+      else
+        PWD=`pwd`
+        ${CURL_GET} "X-Auth-Token: ${STORAGETOKEN}" $STORAGEURL/${OBJECT}/${FILE}
+        echo "${FILE} downloaded to ${PWD}/${FILE}."
+      fi
+}
+
+# local file -> rackspace url
+function file_url() {
+	file=$1
+	echo "$RACKSPACE_URL/$RACKSPACE_CONTAINER$file"
+}
+
+# rackspace url -> HTTP status code
+function get_remote_status() {
+	url="$1"
+	curl -s -I -H "X-Auth-Token: $RACKSPACE_TOKEN" $url | grep HTTP/1.1 | awk {'print $2'}
 }
 
 function upload_file() {
-	curl -X PUT -T $ii -H "X-Auth-Token: ae2bb8ae06ed48f992b13cf185fc0d6e" "https://storage101.lon3.clouddrive.com/v1/MossoCloudFS_39a3ae15-8942-4307-a23c-79f681874d36/legacy_files/$ii";
+	file="$1"
+	localpath="$RACKSPACE_FOLDER$file"
+	url=$(file_url "$file")
+	curl -X PUT -T $localpath -H "X-Auth-Token: $RACKSPACE_TOKEN" $url
 }
 
-function upload_folder() {
-	for ii in `find ./ -type f -name '*'|cut -b 3-|grep -v -P '^$'`; do
-		upload_file $ii
-		if [[ ! -d /root/uploaded/$ii ]]; then
-			curl -X PUT -T $ii -H "X-Auth-Token: ae2bb8ae06ed48f992b13cf185fc0d6e" "https://storage101.lon3.clouddrive.com/v1/MossoCloudFS_39a3ae15-8942-4307-a23c-79f681874d36/legacy_files/$ii";
-			echo $ii
-			mkdir -p /root/uploaded/$ii
+
+#
+#
+# CONTROLLER SECTION
+#
+#
+
+
+function login() {
+	echo "fetching login details from rackspace:"
+	auth_packet=$(get_auth_packet)
+	access_token=$(echo "$auth_packet" | get_access_token)
+	files_endpoint=$(echo "$auth_packet" | get_files_endpoint)
+	export RACKSPACE_TOKEN=$access_token
+	export RACKSPACE_URL=$files_endpoint
+}
+
+
+function uploader() {
+	for file in `find $RACKSPACE_FOLDER -type f -name '*'`; do
+		localpath=${file#"$RACKSPACE_FOLDER"}
+		remoteurl=$(file_url "$localpath")
+		status=$(get_remote_status "$remoteurl")
+		if [[ "$status" == "401" ]]; then
+			echo "ERROR: token not valid"
+			exit 1
+		fi
+
+		if [[ "$status" != "200" ]]; then
+			echo "uploading $localpath"
+			#upload_file $localpath
+			echo "$localpath done"
+		else
+			echo "$localpath uploaded already"
 		fi
 	done
-
 }
+
 
 function show_help() {
 	cat <<EOF
+
 Usage: $0 [options]
 
--h|--help             show this help text
+-h | --help                             show this help text
                      
--f|--folder           path to a local folder to upload
--u|--username         the rackspace username
--a|--apikey           the rackspace apikey
--c|--container        the rackspace container
+-f | --folder    | RACKSPACE_FOLDER     path to a local folder to upload
+-u | --username  | RACKSPACE_USERNAME   the rackspace username
+-a | --apikey    | RACKSPACE_APIKEY     the rackspace apikey
+-c | --container | RACKSPACE_CONTAINER  the rackspace container
 
-Environment Variables:
-
-RACKSPACE_FOLDER -> --folder
-RACKSPACE_USERNAME -> --user
-RACKSPACE_APIKEY -> --apikey
-RACKSPACE_CONTAINER -> --container
 EOF
 }
 
@@ -94,11 +154,8 @@ case $i in
     show_help
     exit
     ;;
-    #--default)
-    #DEFAULT=YES
-    #;;
     *)
-            # unknown option
+			# unknown option
     ;;
 esac
 done
@@ -129,3 +186,11 @@ if [[ ! -d $RACKSPACE_FOLDER ]]; then
 fi
 
 login
+
+echo
+echo "token: $RACKSPACE_TOKEN"
+echo "url: $RACKSPACE_URL"
+echo
+echo "uploading: $RACKSPACE_FOLDER"
+
+uploader
