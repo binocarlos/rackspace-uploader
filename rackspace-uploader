@@ -48,20 +48,6 @@ function get_files_endpoint() {
 #
 #
 
-#Downloads a file from a container
-function f_get () {
-    CURL_TEST="curl -s -I -H"
-    CURL_GET="curl --progress-bar -O -H"
-      RESPONSE=$(${CURL_TEST} "X-Auth-Token: ${STORAGETOKEN}" $STORAGEURL/${OBJECT}/${FILE})| head -1 |awk '{print $2}'
-      if `echo ${RESPONSE} |grep -q 404`; then
-        echo "${FILE} was not found in ${OBJECT} container."
-      else
-        PWD=`pwd`
-        ${CURL_GET} "X-Auth-Token: ${STORAGETOKEN}" $STORAGEURL/${OBJECT}/${FILE}
-        echo "${FILE} downloaded to ${PWD}/${FILE}."
-      fi
-}
-
 # local file -> rackspace url
 function file_url() {
 	file=$1
@@ -111,7 +97,7 @@ function uploader() {
 
 		if [[ "$status" != "200" ]]; then
 			echo "uploading $localpath"
-			#upload_file $localpath
+			upload_file $localpath
 			echo "$localpath done"
 		else
 			echo "$localpath uploaded already"
